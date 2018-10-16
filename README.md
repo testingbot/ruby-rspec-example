@@ -1,6 +1,6 @@
-[![Build Status](https://travis-ci.org/testingbot/ruby-cucumber-example.svg?branch=master)](https://travis-ci.org/testingbot/ruby-cucumber-example)
+[![Build Status](https://travis-ci.org/testingbot/ruby-rspec-example.svg?branch=master)](https://travis-ci.org/testingbot/ruby-rspec-example)
 
-## TestingBot - Rspec Example
+## TestingBot - RSpec Example
 
 TestingBot provides an online grid of browsers and mobile devices to run Automated tests on via Selenium WebDriver.
 This example demonstrates how to use Ruby with RSpec to run a test in parallel across several browsers.
