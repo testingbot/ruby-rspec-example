@@ -1,6 +1,7 @@
 require "rspec/expectations"
 require "selenium-webdriver"
 require "rspec"
+require "testingbot"
 
 RSpec.configure do | config |
   config.before(:each) do | test |
@@ -25,6 +26,12 @@ RSpec.configure do | config |
     sessionid = @driver.session_id
     puts("TestingBotSessionId=#{sessionid} job-name=#{test.full_description}")
     @driver.quit
-  end
 
+    api = TestingBot::Api.new(ENV['TB_KEY'], ENV['TB_SECRET'])
+    if test.exception
+      api.update_test(sessionid, { :success => false })
+    else
+      api.update_test(sessionid, { :success => true })
+    end
+  end
 end
