@@ -1,8 +1,5 @@
 source 'https://rubygems.org'
 
-gem 'rspec'
-gem 'selenium-webdriver'
-gem 'require_all'
-gem 'parallel_split_test'
 gem 'rake'
-gem 'testingbot'
+gem 'rspec', '~> 3.13'
+gem 'selenium-webdriver', '~> 4.20'

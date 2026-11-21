@@ -1,37 +1,45 @@
-require "rspec/expectations"
-require "selenium-webdriver"
 require "rspec"
-require "testingbot"
+require "selenium-webdriver"
 
-RSpec.configure do | config |
-  config.before(:each) do | test |
-    capabilities_config = {
-      :version => "#{ENV['version']}",
-      :browserName => "#{ENV['browserName']}",
-      :platform => "#{ENV['platform']}",
-      :name => test.full_description
-    }
-    #If there's a build tag set it.
-    if ENV['BUILD_TAG'] != nil
-      capabilities_config['build'] = ENV['BUILD_TAG']
-    end
-    if ENV['TUNNEL_IDENTIFIER'] != nil
-      capabilities_config['tunnel-identifier'] = ENV['TUNNEL_IDENTIFIER']
-    end
-    url = "https://#{ENV['TB_KEY']}:#{ENV['TB_SECRET']}@hub.testingbot.com/wd/hub".strip
-    @driver = Selenium::WebDriver.for(:remote, :url => url, :desired_capabilities => capabilities_config)
+# Browser options for the remote session. The Rakefile sets BROWSER_NAME,
+# BROWSER_VERSION and PLATFORM_NAME for each browser it runs.
+def browser_options(test)
+  browser = ENV.fetch("BROWSER_NAME", "chrome")
+  options = case browser.downcase
+            when "firefox" then Selenium::WebDriver::Options.firefox
+            when "safari" then Selenium::WebDriver::Options.safari
+            when "microsoftedge", "edge" then Selenium::WebDriver::Options.edge
+            else Selenium::WebDriver::Options.chrome
+            end
+  options.browser_version = ENV.fetch("BROWSER_VERSION", "latest")
+  options.platform_name = ENV.fetch("PLATFORM_NAME", "WIN11")
+
+  tb_options = {
+    "key" => ENV["TESTINGBOT_KEY"] || ENV["TB_KEY"],
+    "secret" => ENV["TESTINGBOT_SECRET"] || ENV["TB_SECRET"],
+    "name" => test.full_description
+  }
+  tb_options["build"] = ENV["BUILD_TAG"] if ENV["BUILD_TAG"]
+  tb_options["tunnel-identifier"] = ENV["TUNNEL_IDENTIFIER"] if ENV["TUNNEL_IDENTIFIER"]
+  options.add_option("tb:options", tb_options)
+  options
+end
+
+RSpec.configure do |config|
+  config.before(:each) do |test|
+    @driver = Selenium::WebDriver.for(:remote,
+                                      url: "https://hub.testingbot.com/wd/hub",
+                                      options: browser_options(test))
   end
 
-  config.after(:each) do | test |
-    sessionid = @driver.session_id
-    puts("TestingBotSessionId=#{sessionid} job-name=#{test.full_description}")
-    @driver.quit
+  config.after(:each) do |test|
+    next unless @driver
 
-    api = TestingBot::Api.new(ENV['TB_KEY'], ENV['TB_SECRET'])
-    if test.exception
-      api.update_test(sessionid, { :success => false })
-    else
-      api.update_test(sessionid, { :success => true })
+    begin
+      puts("TestingBotSessionId=#{@driver.session_id} job-name=#{test.full_description}")
+      @driver.execute_script("tb:test-result=#{test.exception ? 'failed' : 'passed'}")
+    ensure
+      @driver.quit
     end
   end
 end

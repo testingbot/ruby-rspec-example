@@ -1,25 +1,26 @@
-def run_tests(platform, browser, version, junit_dir)
-  system("platform=\"#{platform}\" browserName=\"#{browser}\" version=\"#{version}\" JUNIT_DIR=\"#{junit_dir}\" parallel_split_test spec")
+BROWSERS = {
+  windows_11_chrome_latest: { name: 'chrome', version: 'latest', platform: 'WIN11' },
+  windows_11_firefox_latest: { name: 'firefox', version: 'latest', platform: 'WIN11' },
+  macos_sequoia_safari_latest: { name: 'safari', version: 'latest', platform: 'SEQUOIA' }
+}.freeze
+
+def run_tests(browser)
+  env = {
+    'BROWSER_NAME' => browser[:name],
+    'BROWSER_VERSION' => browser[:version],
+    'PLATFORM_NAME' => browser[:platform]
+  }
+  system(env, 'bundle exec rspec spec') || raise("Tests failed on #{browser[:name]} #{browser[:platform]}")
 end
 
-task :default => [:test_testingbot]
-
-task :windows_10_ie_11 do
-  run_tests('Windows 10', 'internet explorer', '11', 'junit_reports/windows_10_ie_11')
+BROWSERS.each do |task_name, browser|
+  desc "Run the specs on #{browser[:name]} #{browser[:version]} (#{browser[:platform]})"
+  task(task_name) { run_tests(browser) }
 end
 
-task :windows_7_firefox_latest do
-  run_tests('Windows 7', 'firefox','latest', 'junit_reports/windows_7_firefox_latest')
-end
+task default: [:test_testingbot]
 
-task :os_x_10_14_chrome_latest do
-  run_tests('OS X 10.14', 'chrome', 'latest', 'junit_reports/os_x_10_14_chrome_latest')
+desc 'Run the specs on all browsers in parallel'
+multitask test_testingbot: BROWSERS.keys do
+  puts 'All browsers finished'
 end
-
-multitask :test_testingbot => [
-    :windows_10_ie_11,
-    :windows_7_firefox_latest,
-    :os_x_10_14_chrome_latest,
-  ] do
-    puts 'Running automation'
-  end
